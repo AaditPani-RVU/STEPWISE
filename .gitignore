@@ -1,0 +1,27 @@
+# environments
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# secrets (NFR-PRIV-2)
+.env
+
+# data, weights, recordings (SW-E7) -- never committed
+data/
+runs/
+wandb/
+*.pt
+*.onnx
+*.npy
+*.mp4
+*.mkv
+
+# generated docs artifacts are committed on purpose; nothing here
+
+# build artifacts
+*.egg-info/
+build/
+dist/

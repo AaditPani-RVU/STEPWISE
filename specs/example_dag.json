@@ -1,0 +1,28 @@
+{
+  "procedure": "example_dag",
+  "kind": "dag",
+  "state_model": "stud_grid",
+  "baseplate": { "studs_x": 16, "studs_y": 16 },
+  "steps": [
+    {
+      "id": "s1",
+      "instruction": "Place a red 2x4 brick on the bottom-left corner, long side left-to-right",
+      "part": { "color": "red", "size": "2x4" },
+      "pose": { "x": 0, "y": 0, "layer": 0, "rot": 0 },
+      "hard_depends_on": [],
+      "soft_depends_on": [],
+      "optional": false,
+      "expected_duration_s": [3, 20]
+    },
+    {
+      "id": "s2",
+      "instruction": "Place a blue 2x2 brick on top of the right half of the red brick",
+      "part": { "color": "blue", "size": "2x2" },
+      "pose": { "x": 0, "y": 2, "layer": 1, "rot": 0 },
+      "hard_depends_on": ["s1"],
+      "soft_depends_on": ["s1"],
+      "optional": false,
+      "expected_duration_s": [3, 20]
+    }
+  ]
+}

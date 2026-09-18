@@ -1,0 +1,53 @@
+[project]
+name = "stepwise"
+version = "0.1.0"
+description = "Real-time detection of procedural errors from video using LLM-generated task graphs"
+requires-python = ">=3.11"
+
+# Runtime -- live demo path only (SW-E4: the demo machine installs no more than this).
+# Versions are indicative floors; pin properly in week 1 (SW-E1).
+dependencies = [
+    "numpy>=1.26",
+    "opencv-contrib-python>=4.9",   # ArUco lives in contrib
+    "pydantic>=2.6",                # procedure-spec schemas (IF-SPEC-1)
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+# Perception and streaming -- added once hardware lands (OQ-2, OQ-6)
+live = [
+    "torch>=2.2",
+    "ultralytics>=8.1",             # YOLO detector + ByteTrack
+    "mediapipe>=0.10",
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+]
+# Offline compile + explain (FR-CMP-10: never on the per-frame path)
+llm = [
+    "anthropic>=0.49",
+    "python-dotenv>=1.0",
+]
+train = [
+    "torchvision>=0.17",
+    "transformers>=4.40",           # VideoMAE features
+    "scikit-learn>=1.4",
+    "pandas>=2.2",
+    "matplotlib>=3.8",
+    "wandb>=0.16",
+    "tqdm>=4.66",
+]
+dev = ["pytest>=8.0", "ruff>=0.4", "mypy>=1.9"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["stepwise*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
