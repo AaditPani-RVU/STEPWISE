@@ -45,25 +45,45 @@ class WorldState(ABC):
         """
         return {}, {}
 
+    # --- re-verification (FR-STA-6) -------------------------------------------------
+    #
+    # Four generic methods, because every part of this except "is the view clear
+    # yet" is the same for any state model. Note that a tracker never decides
+    # *what* was confirmed: mapping a step id to a part and a pose needs the
+    # spec, and a tracker that read specs could not be reused for a second
+    # procedure without change (NFR-MNT-1). The caller holds the spec and passes
+    # the answer in.
+
     def request_reverify(self, step_ids: set[str]) -> None:
-        """Ask for a second, unobstructed look at named prior steps (FR-STA-6).
+        """Ask for a second, unobstructed look at named prior steps.
 
         Called by the checker when a hard dependency appears unmet. The request
-        is queued; it is answered once the workspace view is clear, because
-        re-reading through the same occluding hand would reproduce the same
-        mistake.
+        is queued rather than served: re-reading through the same occluding hand
+        would reproduce the mistake that caused it.
         """
-        self._reverify_queue().update(step_ids)
+        self._reverify_pending().update(step_ids)
+        self._reverify_clear = False
 
-    def take_reverification(self) -> Reverification | None:
-        """The answer to any outstanding request, once one is available.
+    def pending_reverify(self) -> set[str]:
+        return set(self._reverify_pending())
 
-        Returns None while the view is still obstructed -- the decision stays
-        deferred rather than being guessed at.
+    def reverify_ready(self) -> bool:
+        """True once a trustworthy reading has been taken since the request.
+
+        The base answer is "as soon as one was asked for"; a model that can tell
+        when its view is obstructed should say so instead.
         """
-        return None
+        return bool(self._reverify_pending()) and getattr(self, "_reverify_clear", False)
 
-    def _reverify_queue(self) -> set[str]:
+    def take_reverification(self, supported: set[str]) -> Reverification | None:
+        """Close out the request, or None while the view is still obstructed."""
+        if not self.reverify_ready():
+            return None
+        self._reverify_pending().clear()
+        self._reverify_clear = False
+        return Reverification(t=getattr(self, "_t", 0.0), supported=set(supported))
+
+    def _reverify_pending(self) -> set[str]:
         if not hasattr(self, "_reverify"):
             self._reverify: set[str] = set()
         return self._reverify

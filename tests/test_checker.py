@@ -18,10 +18,10 @@ from stepwise.checker.rules_lego import (
     WRONG_BRICK,
     WRONG_POSITION,
     WRONG_ROTATION,
-    rotations_indistinguishable,
 )
 from stepwise.compiler.schema import DagSpec, PartRef, Pose
 from stepwise.events import Event, Reverification
+from stepwise.state.lego.grid import rotations_indistinguishable
 
 OUT_OF_ORDER = "out_of_order"
 MISSED_STEP = "missed_step"

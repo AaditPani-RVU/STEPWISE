@@ -11,6 +11,10 @@ The error taxonomy of plan 2.6, made precise enough to implement:
 Out-of-order and missed-step are not here: they come from the generic
 precondition loop and the session-end sweep in the engine, because they are
 properties of the dependency graph rather than of the grid.
+
+Stud geometry itself -- what two poses on a grid mean relative to each other --
+lives in `state/lego/grid.py`, so the tracker and the checker cannot disagree
+about whether a brick is where a step wanted it.
 """
 
 from __future__ import annotations
@@ -19,39 +23,13 @@ from typing import NamedTuple
 
 from stepwise.compiler.schema import LoweredAction, PartRef, Pose, Precondition
 from stepwise.events import COMPLETED, OPEN, Alert, Event, Status
+from stepwise.state.lego.grid import pose_matches, same_cell, stud_distance
 
 WRONG_BRICK = "wrong_brick"
 WRONG_POSITION = "wrong_position"
 WRONG_ROTATION = "wrong_rotation"
 EXTRA_PART = "extra_part"
 REMOVED_PART = "removed_part"
-
-def rotations_indistinguishable(part: PartRef, a: int, b: int) -> bool:
-    """Would these two rotations of this part look identical on the plate?
-
-    A 2x4 brick at 0 and at 180 degrees covers the same studs and presents the
-    same face, and a 2x2 is the same at all four. Alerting on a difference no
-    camera can see would be a false alert by construction, and NFR-REL-2 puts a
-    budget of one per build on those.
-    """
-    w, h = part.dims
-    if w == h:
-        return True
-    return a % 180 == b % 180
-
-
-def pose_matches(observed: Pose, expected: Pose, part: PartRef) -> bool:
-    return (
-        observed.x == expected.x
-        and observed.y == expected.y
-        and observed.layer == expected.layer
-        and rotations_indistinguishable(part, observed.rot, expected.rot)
-    )
-
-
-def _cells_match(a: Pose, b: Pose) -> bool:
-    return a.x == b.x and a.y == b.y and a.layer == b.layer
-
 
 def _pose_str(p: Pose) -> str:
     return f"({p.x},{p.y}) on layer {p.layer}"
@@ -93,7 +71,7 @@ class StudGridPolicy:
 
         # Something is wanted at exactly this cell, so the cell is not the
         # problem -- the brick or its rotation is.
-        at_cell = [c for c in open_actions if _cells_match(pose, c.pose)]
+        at_cell = [c for c in open_actions if same_cell(pose, c.pose)]
         if at_cell:
             same_part = next((c for c in at_cell if c.part == part), None)
             if same_part is not None:
@@ -128,8 +106,8 @@ class StudGridPolicy:
         # The brick is one the model uses, just not here.
         wants_part = [c for c in open_actions if c.part == part]
         if wants_part:
-            nearest = min(wants_part, key=lambda c: self._distance(pose, c.pose))
-            off = self._distance(pose, nearest.pose)
+            nearest = min(wants_part, key=lambda c: stud_distance(pose, c.pose))
+            off = stud_distance(pose, nearest.pose)
             return [
                 Alert(
                     t=ev.t,
@@ -168,7 +146,7 @@ class StudGridPolicy:
         if ev.pose is None:
             return []
         for action in actions:
-            if action.pose is None or not _cells_match(ev.pose, action.pose):
+            if action.pose is None or not same_cell(ev.pose, action.pose):
                 continue
             if status.get(action.id) not in COMPLETED:
                 continue
@@ -217,7 +195,3 @@ class StudGridPolicy:
             for a in actions
             if a.part is not None and a.pose is not None and status.get(a.id) in OPEN
         ]
-
-    @staticmethod
-    def _distance(a: Pose, b: Pose) -> int:
-        return abs(a.x - b.x) + abs(a.y - b.y) + abs(a.layer - b.layer)
