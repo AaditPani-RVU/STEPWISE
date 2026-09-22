@@ -75,7 +75,7 @@ blockquote { margin: 0 0 8pt; padding-left: 10pt; border-left: 2pt solid #ccd4dc
 
 def strikethrough(text: str) -> str:
     """python-markdown has no ~~del~~; apply it outside fenced blocks."""
-    parts = re.split(r"(```.*?```)", text, flags=re.S)
+    parts = re.split(r"(```.*?```)", text, flags=re.DOTALL)
     for i, part in enumerate(parts):
         if not part.startswith("```"):
             parts[i] = re.sub(r"~~(.+?)~~", r"<del>\1</del>", part)
@@ -83,7 +83,7 @@ def strikethrough(text: str) -> str:
 
 
 def title_of(text: str, fallback: str) -> str:
-    match = re.search(r"^#\s+(.+)$", text, flags=re.M)
+    match = re.search(r"^#\s+(.+)$", text, flags=re.MULTILINE)
     return match.group(1).strip() if match else fallback
 
 

@@ -18,7 +18,7 @@ import re
 from pathlib import Path
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, field_validator
 
 Rotation = Literal[0, 90, 180, 270]
 
@@ -152,6 +152,7 @@ class DagSpec(Strict):
                     part=step.part,
                     pose=step.pose,
                     optional=step.optional,
+                    repeatable=False,
                     preconditions=pre,
                     effects=[f"place({step.id})"],
                 )
@@ -208,6 +209,7 @@ class ConstraintSpec(Strict):
                 part=None,
                 pose=None,
                 optional=False,
+                repeatable=True,
                 preconditions=list(a.preconditions),
                 effects=list(a.effects),
             )
@@ -230,6 +232,11 @@ class LoweredAction(Strict):
     part: PartRef | None = None
     pose: Pose | None = None
     optional: bool = False
+    #: A DAG step is done once and never judged again. A constraint action --
+    #: Jenga's `move` -- governs every matching event for the whole session.
+    #: This is the only thing that differs between the two forms downstream,
+    #: and it is a field rather than a branch in the engine (FR-CHK-2).
+    repeatable: bool = False
     preconditions: list[Precondition] = Field(default_factory=list)
     effects: list[str] = Field(default_factory=list)
 
@@ -243,13 +250,12 @@ class LoweredAction(Strict):
 ProcedureSpec = Annotated[DagSpec | ConstraintSpec, Field(discriminator="kind")]
 
 
-class _SpecAdapter(BaseModel):
-    spec: ProcedureSpec
+_ADAPTER: TypeAdapter[DagSpec | ConstraintSpec] = TypeAdapter(ProcedureSpec)
 
 
 def parse_spec(data: dict) -> DagSpec | ConstraintSpec:
     """Parse either form, dispatching on `kind` (IF-SPEC-1)."""
-    return _SpecAdapter(spec=data).spec
+    return _ADAPTER.validate_python(data)
 
 
 def load_spec(path: str | Path) -> DagSpec | ConstraintSpec:
