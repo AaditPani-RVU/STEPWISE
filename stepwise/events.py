@@ -22,7 +22,7 @@ Status = Literal["pending", "active", "done", "error"]
 
 #: Statuses meaning "the part is there". An out-of-order step is `error` --
 #: flagged for the UI -- but it was still performed, so `done()` must be true of
-#: it. Treating a flagged step as not done would cascade one mistake into an
+#: it; so is a step attempted with the wrong brick (see `rules_lego`). Treating a flagged step as not done would cascade one mistake into an
 #: out-of-order alert on every step that depends on it, against the budget of
 #: one false alert per build (NFR-REL-2).
 COMPLETED: tuple[Status, ...] = ("done", "error")

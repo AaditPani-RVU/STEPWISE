@@ -1,0 +1,302 @@
+{
+  "procedure": "model_a_house",
+  "kind": "dag",
+  "state_model": "stud_grid",
+  "baseplate": {
+    "studs_x": 16,
+    "studs_y": 16
+  },
+  "steps": [
+    {
+      "id": "s1",
+      "instruction": "Place a red 2x4 brick lengthwise along the bottom edge, in the bottom-left corner",
+      "part": {
+        "color": "red",
+        "size": "2x4"
+      },
+      "pose": {
+        "x": 0,
+        "y": 0,
+        "layer": 0,
+        "rot": 90
+      },
+      "hard_depends_on": [],
+      "soft_depends_on": [],
+      "optional": false,
+      "expected_duration_s": [
+        3,
+        20
+      ]
+    },
+    {
+      "id": "s2",
+      "instruction": "Place a second red 2x4 brick lengthwise to the right of the first, completing the front wall",
+      "part": {
+        "color": "red",
+        "size": "2x4"
+      },
+      "pose": {
+        "x": 4,
+        "y": 0,
+        "layer": 0,
+        "rot": 90
+      },
+      "hard_depends_on": [],
+      "soft_depends_on": [
+        "s1"
+      ],
+      "optional": false,
+      "expected_duration_s": [
+        3,
+        20
+      ]
+    },
+    {
+      "id": "s3",
+      "instruction": "Place a blue 2x2 brick directly behind the left end of the front wall",
+      "part": {
+        "color": "blue",
+        "size": "2x2"
+      },
+      "pose": {
+        "x": 0,
+        "y": 2,
+        "layer": 0,
+        "rot": 0
+      },
+      "hard_depends_on": [],
+      "soft_depends_on": [
+        "s2"
+      ],
+      "optional": false,
+      "expected_duration_s": [
+        3,
+        20
+      ]
+    },
+    {
+      "id": "s4",
+      "instruction": "Place a blue 2x2 brick directly behind the right end of the front wall",
+      "part": {
+        "color": "blue",
+        "size": "2x2"
+      },
+      "pose": {
+        "x": 6,
+        "y": 2,
+        "layer": 0,
+        "rot": 0
+      },
+      "hard_depends_on": [],
+      "soft_depends_on": [
+        "s3"
+      ],
+      "optional": false,
+      "expected_duration_s": [
+        3,
+        20
+      ]
+    },
+    {
+      "id": "s5",
+      "instruction": "Place a white 1x2 brick crosswise just behind the middle of the left red brick, as the doorstep",
+      "part": {
+        "color": "white",
+        "size": "1x2"
+      },
+      "pose": {
+        "x": 2,
+        "y": 2,
+        "layer": 0,
+        "rot": 90
+      },
+      "hard_depends_on": [],
+      "soft_depends_on": [
+        "s4"
+      ],
+      "optional": false,
+      "expected_duration_s": [
+        3,
+        20
+      ]
+    },
+    {
+      "id": "s6",
+      "instruction": "Place a yellow 1x4 brick lengthwise behind the left blue brick, forming the left half of the back wall",
+      "part": {
+        "color": "yellow",
+        "size": "1x4"
+      },
+      "pose": {
+        "x": 0,
+        "y": 4,
+        "layer": 0,
+        "rot": 90
+      },
+      "hard_depends_on": [],
+      "soft_depends_on": [
+        "s5"
+      ],
+      "optional": false,
+      "expected_duration_s": [
+        3,
+        20
+      ]
+    },
+    {
+      "id": "s7",
+      "instruction": "Place a yellow 1x4 brick lengthwise to the right of it, completing the back wall",
+      "part": {
+        "color": "yellow",
+        "size": "1x4"
+      },
+      "pose": {
+        "x": 4,
+        "y": 4,
+        "layer": 0,
+        "rot": 90
+      },
+      "hard_depends_on": [],
+      "soft_depends_on": [
+        "s6"
+      ],
+      "optional": false,
+      "expected_duration_s": [
+        3,
+        20
+      ]
+    },
+    {
+      "id": "s8",
+      "instruction": "Stack a green 2x4 brick exactly on top of the left red brick",
+      "part": {
+        "color": "green",
+        "size": "2x4"
+      },
+      "pose": {
+        "x": 0,
+        "y": 0,
+        "layer": 1,
+        "rot": 90
+      },
+      "hard_depends_on": [
+        "s1"
+      ],
+      "soft_depends_on": [
+        "s1",
+        "s7"
+      ],
+      "optional": false,
+      "expected_duration_s": [
+        3,
+        20
+      ]
+    },
+    {
+      "id": "s9",
+      "instruction": "Stack a green 2x4 brick exactly on top of the right red brick",
+      "part": {
+        "color": "green",
+        "size": "2x4"
+      },
+      "pose": {
+        "x": 4,
+        "y": 0,
+        "layer": 1,
+        "rot": 90
+      },
+      "hard_depends_on": [
+        "s2"
+      ],
+      "soft_depends_on": [
+        "s2",
+        "s8"
+      ],
+      "optional": false,
+      "expected_duration_s": [
+        3,
+        20
+      ]
+    },
+    {
+      "id": "s10",
+      "instruction": "Stack a black 2x2 brick exactly on top of the left blue brick",
+      "part": {
+        "color": "black",
+        "size": "2x2"
+      },
+      "pose": {
+        "x": 0,
+        "y": 2,
+        "layer": 1,
+        "rot": 0
+      },
+      "hard_depends_on": [
+        "s3"
+      ],
+      "soft_depends_on": [
+        "s3",
+        "s9"
+      ],
+      "optional": false,
+      "expected_duration_s": [
+        3,
+        20
+      ]
+    },
+    {
+      "id": "s11",
+      "instruction": "Stack a black 2x2 brick exactly on top of the right blue brick",
+      "part": {
+        "color": "black",
+        "size": "2x2"
+      },
+      "pose": {
+        "x": 6,
+        "y": 2,
+        "layer": 1,
+        "rot": 0
+      },
+      "hard_depends_on": [
+        "s4"
+      ],
+      "soft_depends_on": [
+        "s4",
+        "s10"
+      ],
+      "optional": false,
+      "expected_duration_s": [
+        3,
+        20
+      ]
+    },
+    {
+      "id": "s12",
+      "instruction": "Bridge the join in the back wall with a white 1x2 brick laid crosswise over both yellow bricks",
+      "part": {
+        "color": "white",
+        "size": "1x2"
+      },
+      "pose": {
+        "x": 3,
+        "y": 4,
+        "layer": 1,
+        "rot": 90
+      },
+      "hard_depends_on": [
+        "s6",
+        "s7"
+      ],
+      "soft_depends_on": [
+        "s6",
+        "s7",
+        "s11"
+      ],
+      "optional": false,
+      "expected_duration_s": [
+        3,
+        20
+      ]
+    }
+  ]
+}

@@ -148,6 +148,44 @@ def test_removing_a_done_brick_reopens_the_step(flat_spec: DagSpec) -> None:
     assert [a.code for a in checker.finish()].count(MISSED_STEP) == 3
 
 
+def test_one_wrong_brick_is_one_alert(flat_spec: DagSpec) -> None:
+    """The wrong brick is an attempt at s1. s2 after it is not out of order, and
+    s1 is not reported again as missed: one mistake, one alert (NFR-REL-2)."""
+    checker = Checker(flat_spec)
+    green = Event(t=1.0, kind="ADD", part=PartRef(color="green", size="2x4"), pose=Pose(x=0, y=0))
+    assert [a.code for a in checker.on_event(green)] == [WRONG_BRICK]
+    assert checker.status["s1"] == "error"
+    assert checker.on_event(placed(flat_spec.steps[1], t=2.0)) == []
+    assert checker.on_event(placed(flat_spec.steps[2], t=3.0)) == []
+    assert checker.finish() == []
+    assert len(checker.alerts) == 1
+
+
+def test_swapping_in_the_right_brick_completes_the_step_quietly(flat_spec: DagSpec) -> None:
+    checker = Checker(flat_spec)
+    green = PartRef(color="green", size="2x4")
+    checker.on_event(Event(t=1.0, kind="ADD", part=green, pose=Pose(x=0, y=0)))
+    assert checker.on_event(Event(t=2.0, kind="REMOVE", part=green, pose=Pose(x=0, y=0))) == []
+    assert checker.status["s1"] == "pending"
+    assert checker.on_event(placed(flat_spec.steps[0], t=3.0)) == []
+    assert checker.status["s1"] == "done"
+
+
+def test_a_misplaced_brick_moved_to_the_right_cell_completes_the_step(
+    flat_spec: DagSpec,
+) -> None:
+    checker = Checker(flat_spec)
+    red = flat_spec.steps[0].part
+    assert [a.code for a in checker.on_event(
+        Event(t=1.0, kind="ADD", part=red, pose=Pose(x=1, y=0))
+    )] == [WRONG_POSITION]
+    # The right brick lands before the tracker drops the wrong one.
+    assert checker.on_event(placed(flat_spec.steps[0], t=2.0)) == []
+    assert checker.status["s1"] == "done"
+    assert checker.on_event(Event(t=2.5, kind="REMOVE", part=red, pose=Pose(x=1, y=0))) == []
+    assert checker.status["s1"] == "done"
+
+
 def test_removing_a_brick_no_step_claims_is_silent(flat_spec: DagSpec) -> None:
     checker = Checker(flat_spec)
     assert checker.on_event(Event(t=5.0, kind="REMOVE", pose=Pose(x=12, y=12))) == []
@@ -207,6 +245,30 @@ def test_a_confirmed_perception_miss_costs_the_user_nothing(dag_spec: DagSpec) -
     assert checker.perception_misses == ["s1"]
     assert checker.status == {"s1": "done", "s2": "done"}
     assert checker.finish() == []
+
+
+def test_a_dependency_committed_before_the_re_read_is_not_our_miss(
+    dag_spec: DagSpec,
+) -> None:
+    """The tracker caught up on its own; charging our recall for that would be
+    as wrong as ignoring a real miss."""
+    checker = Checker(dag_spec, state=_RecordingState())
+    checker.on_event(placed(dag_spec.steps[1], t=3.0))
+    checker.on_event(placed(dag_spec.steps[0], t=3.5))
+    alerts = checker.on_reverify(Reverification(t=4.0, supported={"s1"}))
+    assert alerts == []
+    assert checker.perception_misses == []
+    assert checker.status == {"s1": "done", "s2": "done"}
+
+
+def test_the_same_brick_seen_again_is_not_an_extra_part(dag_spec: DagSpec) -> None:
+    """A re-read credits s1 before the tracker commits it; the commit that
+    follows is the same brick, not a second one."""
+    checker = Checker(dag_spec, state=_RecordingState())
+    checker.on_event(placed(dag_spec.steps[1], t=3.0))
+    checker.on_reverify(Reverification(t=4.0, supported={"s1"}))
+    assert checker.on_event(placed(dag_spec.steps[0], t=4.5)) == []
+    assert checker.alerts == []
 
 
 def test_a_genuine_skip_is_reported_only_after_the_re_read(dag_spec: DagSpec) -> None:

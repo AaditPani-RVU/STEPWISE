@@ -276,11 +276,16 @@ class Checker:
         asked = {d for deferred in self._deferred for d in deferred.deps}
         raised: list[Alert] = []
         for dep in sorted(asked):
-            if rev.confirms(dep):
+            if self.status.get(dep) in COMPLETED:
+                # The tracker caught up on its own before the re-read landed --
+                # a late commit, not a miss. Counting it would understate our
+                # detector's recall as surely as ignoring a real miss overstates it.
+                self._note(rev.t, "resolved", "confirmed by the tracker before the re-read", dep)
+            elif rev.confirms(dep):
                 self.status[dep] = "done"
                 self.perception_misses.append(dep)
                 self._note(rev.t, "perception_miss", "present all along; we missed it", dep)
-            elif self.status.get(dep) not in COMPLETED:
+            else:
                 self._reported_missing.add(dep)
                 raised += self._raise_all(
                     None,
@@ -413,6 +418,11 @@ class Checker:
         self.log.append(LogEntry(t, kind, detail, target))
 
     # --- views for the UI ----------------------------------------------------------
+
+    def action(self, action_id: str) -> LoweredAction | None:
+        """The lowered action behind an id -- how a caller resolves a step id to
+        a part and a pose without reading the spec's surface form."""
+        return self._by_id.get(action_id)
 
     def checklist(self) -> list[tuple[str, Status, str]]:
         """(id, status, instruction) in spec order, for the live checklist."""

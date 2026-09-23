@@ -74,6 +74,20 @@ class Pose(Strict):
         return {(self.x + dx, self.y + dy) for dx in range(w) for dy in range(h)}
 
 
+# --- provenance (IF-SPEC-5) ---------------------------------------------------------
+
+class Provenance(Strict):
+    """Who produced a spec. Stamped by the compiler, never written by the LLM --
+    the schema the model is shown leaves this field out."""
+
+    compiler_version: str
+    #: The LLM that produced it, or "hand" / "demo" for the other two routes.
+    model: str
+    source: str = ""
+    compiled_at: str = ""
+    repaired: bool = False
+
+
 # --- DAG form (plan 4.2) ------------------------------------------------------------
 
 class Step(Strict):
@@ -112,6 +126,7 @@ class DagSpec(Strict):
     state_model: Literal["stud_grid"] = "stud_grid"
     baseplate: Baseplate
     steps: list[Step]
+    provenance: Provenance | None = None
 
     def step(self, step_id: str) -> Step | None:
         return next((s for s in self.steps if s.id == step_id), None)
@@ -199,6 +214,7 @@ class ConstraintSpec(Strict):
     tower: Tower
     actions: list[Action]
     terminal: list[Terminal] = Field(default_factory=list)
+    provenance: Provenance | None = None
 
     def lower(self) -> list[LoweredAction]:
         """Already native; carried across unchanged."""

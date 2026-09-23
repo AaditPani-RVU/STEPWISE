@@ -109,7 +109,10 @@ class BuildState(WorldState):
         self._reverify_clear = True
 
     def _commit(self, t: float) -> None:
-        for cell, (reading, since) in list(self._seen.items()):
+        # Bottom layer first. Bricks settling in the same frame were stacked in
+        # that order, and the checker would otherwise see a brick before the one
+        # holding it up and defer a judgement over nothing.
+        for cell, (reading, since) in sorted(self._seen.items(), key=lambda kv: kv[0][2]):
             if t - since < self.stable_s:
                 continue
             current = self.placed.get(cell)
@@ -168,13 +171,19 @@ class BuildState(WorldState):
         return super().reverify_ready() and not self.occluded
 
     def confirmed_at(self, part: PartRef, pose: Pose) -> bool:
-        """Is this exact part committed at this pose right now?
+        """Is this exact part at this pose right now?
 
         The question the re-verification path asks of each deferred dependency.
+        A brick in the latest clear reading counts even if it has not yet held
+        still for `stable_s`: the stability filter guards blind commits, but a
+        re-read is a targeted look for one known part in one known cell, and
+        making it wait out the timer would report a brick that is sitting right
+        there as a missed step.
         """
-        reading = self.placed.get((pose.x, pose.y, pose.layer))
-        return (
-            reading is not None
-            and reading.part == part
-            and pose_matches(reading.pose, pose, part)
+        cell = (pose.x, pose.y, pose.layer)
+        seen = self._seen.get(cell)
+        candidates = [self.placed.get(cell), None if seen is None else seen[0]]
+        return any(
+            r is not None and r.part == part and pose_matches(r.pose, pose, part)
+            for r in candidates
         )

@@ -1,0 +1,37 @@
+# A Jenga game in which every rule in the compiled rulebook is broken once,
+# between legal moves, and which ends in a collapse. Hand-written.
+#
+# Move 5 breaks two rules at once and is expected to draw two alerts: starting
+# layer 20 while 19 is unfinished is both "layer started early" (c3) and a
+# placement outside the legal top slots (c4). The plan's rulebook states c4
+# broadly enough to contain c3; whether the compiled spec should narrow it is a
+# compiler-eval question, not something the checker should paper over.
+spec: ../../specs/example_constraints.json
+expect:
+- game_over
+- illegal_source_layer move
+- layer_started_early move
+- two_handed_move move
+- wrong_replacement move
+- wrong_replacement move
+keyframes:
+# 1. legal: from layer 5, onto a fresh layer 18
+- {t: 2.0, pull: [5, 1], hands: 1}
+- {t: 5.0, place: [18, 0]}
+# 2. from layer 17, the top complete layer
+- {t: 8.0, pull: [17, 1], hands: 1}
+- {t: 11.0, place: [18, 1]}
+# 3. two hands on the tower during the pull
+- {t: 14.0, pull: [6, 0], hands: 2}
+- {t: 17.0, place: [18, 2]}
+# 4. pushed back into a hole in the body of the tower
+- {t: 20.0, pull: [7, 1], hands: 1}
+- {t: 23.0, place: [5, 1]}
+# legal: layer 18 is complete, so layer 19 may begin
+- {t: 26.0, pull: [8, 0], hands: 1}
+- {t: 29.0, place: [19, 0]}
+# 5. layer 20 begun while 19 is unfinished
+- {t: 32.0, pull: [9, 1], hands: 1}
+- {t: 35.0, place: [20, 0]}
+# 6. the tower comes down
+- {t: 38.0, collapse: true}

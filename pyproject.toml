@@ -36,7 +36,7 @@ train = [
     "wandb>=0.16",
     "tqdm>=4.66",
 ]
-dev = ["pytest>=8.0", "ruff>=0.4", "mypy>=1.9"]
+dev = ["pytest>=8.0", "ruff>=0.4", "mypy>=1.9", "types-PyYAML"]
 
 [build-system]
 requires = ["setuptools>=68"]
@@ -51,3 +51,8 @@ target-version = "py311"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[[tool.mypy.overrides]]
+# Optional extras imported lazily (`llm`, `live`); neither ships type information.
+module = ["anthropic", "anthropic.*", "mediapipe", "mediapipe.*"]
+ignore_missing_imports = true

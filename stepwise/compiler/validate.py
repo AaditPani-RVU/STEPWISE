@@ -210,12 +210,12 @@ def _check_constraint_ids(spec: ConstraintSpec) -> list[Problem]:
 
 
 def _check_satisfiable(spec: ConstraintSpec) -> list[Problem]:
-    """Structural satisfiability: at least one action, and a way for a game to end.
+    """At least one action, a way for a game to end, and a legal first move.
 
-    The full check FR-CMP-6 asks for -- that a legal move exists from the initial
-    state -- needs the tower lattice to simulate against, so it is completed when
-    the Jenga state model lands (FR-STA-7). Until then this catches the specs that
-    are unrunnable on their face.
+    The last is FR-CMP-6's satisfiability check proper: a rulebook compiled so
+    strictly that nothing is legal from the opening position would flag every
+    move of every game. It is found by trying every move from the initial state
+    against every alerting precondition, one hand on the tower.
     """
     out = []
     if not spec.actions:
@@ -231,7 +231,36 @@ def _check_satisfiable(spec: ConstraintSpec) -> list[Problem]:
             Problem("no_terminal", "warning", "",
                     "no terminal condition, so a session can never end on its own")
         )
+    if spec.actions and spec.state_model == "tower_lattice" and not _has_legal_opening(spec):
+        out.append(
+            Problem("unsatisfiable", "error", "",
+                    "no move is legal from the initial tower, so every move would be a foul")
+        )
     return out
+
+
+def _has_legal_opening(spec: ConstraintSpec) -> bool:
+    # Imported here: the validator needs a state model to simulate against, but
+    # nothing else in the compiler should depend on one.
+    from stepwise.checker.evaluate import Environment, EvalError, evaluate
+    from stepwise.events import Slot
+    from stepwise.state.jenga.lattice import TowerLattice, full_tower
+
+    layers, slots = spec.tower.layers, spec.tower.slots_per_layer
+    lattice = TowerLattice(initial=full_tower(layers, slots), slots_per_layer=slots)
+    base = Environment(funcs={"done": lambda _id: False}).merge(*lattice.predicates())
+    cells = [Slot(layer, s) for layer in range(layers + 1) for s in range(slots)]
+    for action in spec.actions:
+        pres = [p for p in action.preconditions if p.on_violation == "alert"]
+        for src in cells[: layers * slots]:
+            for dst in cells:
+                env = base.merge({"src": src, "dst": dst, "hands_in_contact": 1})
+                try:
+                    if all(evaluate(p.expr, env) for p in pres):
+                        return True
+                except EvalError:
+                    continue
+    return False
 
 
 # --- entry point --------------------------------------------------------------------

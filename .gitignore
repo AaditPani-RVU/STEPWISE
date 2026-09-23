@@ -25,3 +25,6 @@ wandb/
 *.egg-info/
 build/
 dist/
+
+# downloaded model files (fetched by scripts/fetch_models.sh)
+models/

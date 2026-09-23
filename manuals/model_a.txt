@@ -1,0 +1,16 @@
+# Model A -- small house. 16x16 baseplate, two layers, 12 steps.
+# DRAFT: a placeholder design until the team fixes Model A against the bricks
+# actually in hand (plan section 12). Coordinates: studs from the bottom-left corner.
+
+1. Place a red 2x4 brick lengthwise along the bottom edge, in the bottom-left corner.
+2. Place a second red 2x4 brick lengthwise to the right of the first, completing the front wall.
+3. Place a blue 2x2 brick directly behind the left end of the front wall.
+4. Place a blue 2x2 brick directly behind the right end of the front wall.
+5. Place a white 1x2 brick crosswise just behind the middle of the left red brick, as the doorstep.
+6. Place a yellow 1x4 brick lengthwise behind the left blue brick, forming the left half of the back wall.
+7. Place a yellow 1x4 brick lengthwise to the right of it, completing the back wall.
+8. Stack a green 2x4 brick exactly on top of the left red brick.
+9. Stack a green 2x4 brick exactly on top of the right red brick.
+10. Stack a black 2x2 brick exactly on top of the left blue brick.
+11. Stack a black 2x2 brick exactly on top of the right blue brick.
+12. Bridge the join in the back wall with a white 1x2 brick laid crosswise over both yellow bricks.

@@ -181,6 +181,28 @@ def test_rules_are_judged_against_the_state_before_the_move() -> None:
     assert funcs["layer_complete"](18) is False
 
 
+def test_a_move_across_two_readings_is_judged_against_the_tower_before_it() -> None:
+    """Pull in one reading, place in the next. The reading between shows a gap
+    in layer 17 with nothing on top; judging the placement against that would
+    make one pull from the top complete layer look like three fouls."""
+    pre = full_tower()
+    lattice = TowerLattice(initial=pre)
+    lattice.observe(tower({17: (0, 1, 1)}), t=2.0, hands_in_contact=1)
+    lattice.observe(tower({17: (0, 1, 1), 18: (1, 0, 0)}), t=6.0)
+    assert lattice.before() == pre
+
+    # The next move starts from the tower at rest, block back on top.
+    lattice.observe(tower({5: (1, 0, 1), 17: (0, 1, 1), 18: (1, 0, 0)}), t=9.0)
+    assert lattice.before() == tower({17: (0, 1, 1), 18: (1, 0, 0)})
+
+
+def test_a_pull_carries_the_hand_count_that_watched_it() -> None:
+    lattice = TowerLattice()
+    lattice.observe(tower({4: (1, 0, 1)}), t=2.0, hands_in_contact=2)
+    [removal] = lattice.diff()
+    assert removal.hands_in_contact == 2
+
+
 def test_an_unknown_hand_count_silences_only_its_own_rule(constraint_spec) -> None:
     """One missing perception signal must not switch off the other three rules."""
     checker = Checker(constraint_spec, state=TowerLattice())

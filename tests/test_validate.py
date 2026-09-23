@@ -84,3 +84,17 @@ def test_errors_helper_filters(dag_spec):
     spec = dag_spec.model_copy(deep=True)
     spec.steps[1].hard_depends_on = []
     assert errors(validate(spec)) == []
+
+
+def test_a_rulebook_with_a_legal_opening_is_satisfiable(constraint_spec) -> None:
+    assert not [p for p in validate(constraint_spec) if p.code == "unsatisfiable"]
+
+
+def test_a_rulebook_that_forbids_every_move_is_refused(constraint_spec) -> None:
+    pre = constraint_spec.actions[0].preconditions[0]
+    strict = pre.model_copy(update={"expr": "src.layer < 0"})
+    action = constraint_spec.actions[0].model_copy(
+        update={"preconditions": [strict, *constraint_spec.actions[0].preconditions[1:]]}
+    )
+    spec = constraint_spec.model_copy(update={"actions": [action]})
+    assert [p.code for p in validate(spec) if p.severity == "error"] == ["unsatisfiable"]

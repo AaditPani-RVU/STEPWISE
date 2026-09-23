@@ -8,6 +8,14 @@ The error taxonomy of plan 2.6, made precise enough to implement:
     nothing wants it                               -> extra part     (FR-CHK-6)
     a completed step's brick is gone               -> removed part    (FR-CHK-6)
 
+A brick that draws one of the first three is an *attempt* at that step, made
+wrongly, and the step goes to `error`. That is what keeps one mistake to one
+alert: `error` counts as performed for the steps that depend on it (see
+`events.COMPLETED`), so the next step is not also called out of order, and the
+session-end sweep does not report the same step a second time as missed. Taking
+the wrong brick away withdraws the attempt and reopens the step without comment;
+putting the right brick in completes it.
+
 Out-of-order and missed-step are not here: they come from the generic
 precondition loop and the session-end sweep in the engine, because they are
 properties of the dependency graph rather than of the grid.
@@ -35,6 +43,10 @@ def _pose_str(p: Pose) -> str:
     return f"({p.x},{p.y}) on layer {p.layer}"
 
 
+def _cell(p: Pose) -> Cell:
+    return (p.x, p.y, p.layer)
+
+
 class _Placement(NamedTuple):
     """An action that puts a known part at a known pose.
 
@@ -48,8 +60,18 @@ class _Placement(NamedTuple):
     pose: Pose
 
 
+#: The codes that mean "an attempt at this step, made wrongly".
+_ATTEMPTS = frozenset({WRONG_BRICK, WRONG_POSITION, WRONG_ROTATION})
+
+Cell = tuple[int, int, int]
+
+
 class StudGridPolicy:
     """The LEGO half of the checker."""
+
+    def __init__(self) -> None:
+        #: Cells holding a wrong brick, and the step it was an attempt at.
+        self._stand_ins: dict[Cell, str] = {}
 
     def match(
         self, ev: Event, actions: list[LoweredAction], status: dict[str, Status]
@@ -64,9 +86,32 @@ class StudGridPolicy:
     def unmatched(
         self, ev: Event, actions: list[LoweredAction], status: dict[str, Status]
     ) -> list[Alert]:
+        alerts = self._classify(ev, actions, status)
+        for alert in alerts:
+            if alert.code in _ATTEMPTS and alert.target and ev.pose is not None:
+                status[alert.target] = "error"
+                self._stand_ins[_cell(ev.pose)] = alert.target
+        return alerts
+
+    def _classify(
+        self, ev: Event, actions: list[LoweredAction], status: dict[str, Status]
+    ) -> list[Alert]:
         part, pose = ev.part, ev.pose
         if part is None or pose is None:
             return []
+
+        # Exactly the brick of a step already credited: a re-read confirmed it
+        # before the tracker committed it, and this is that commit arriving. The
+        # same brick seen twice is not an extra one.
+        for action in actions:
+            if (
+                status.get(action.id) in COMPLETED
+                and action.part == part
+                and action.pose is not None
+                and pose_matches(pose, action.pose, part)
+            ):
+                return []
+
         open_actions = self._open(actions, status)
 
         # Something is wanted at exactly this cell, so the cell is not the
@@ -145,6 +190,13 @@ class StudGridPolicy:
         """
         if ev.pose is None:
             return []
+        attempted = self._stand_ins.pop(_cell(ev.pose), None)
+        if attempted is not None:
+            # A wrong brick taken away: the attempt is withdrawn, which is the
+            # user correcting themselves, not a new error.
+            if status.get(attempted) == "error":
+                status[attempted] = "pending"
+            return []
         for action in actions:
             if action.pose is None or not same_cell(ev.pose, action.pose):
                 continue
@@ -183,15 +235,21 @@ class StudGridPolicy:
             f"{_pose_str(pose)} -- \"{action.instruction}\""
         )
 
-    @staticmethod
-    def _open(actions: list[LoweredAction], status: dict[str, Status]) -> list[_Placement]:
+    def _open(self, actions: list[LoweredAction], status: dict[str, Status]) -> list[_Placement]:
         """Placements still open to being matched.
 
         `active` counts as open: a temporal hint may have moved a step there
-        before the state diff confirmed it (plan 2.5).
+        before the state diff confirmed it (plan 2.5). So does a step whose only
+        attempt so far was a wrong brick -- the right one completes it.
         """
+        attempted = set(self._stand_ins.values())
         return [
             _Placement(a, a.part, a.pose)
             for a in actions
-            if a.part is not None and a.pose is not None and status.get(a.id) in OPEN
+            if a.part is not None
+            and a.pose is not None
+            and (
+                status.get(a.id) in OPEN
+                or (status.get(a.id) == "error" and a.id in attempted)
+            )
         ]
